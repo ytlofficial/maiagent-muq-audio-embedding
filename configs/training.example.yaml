@@ -1,0 +1,41 @@
+# Data paths are relative to DATA_ROOT, mounted at /workspace in the container.
+db_path: outputs/lancedb/simai_pattern_chunks
+train_csv: datasets/audio_embedding_charts_1000_300_300_train.csv
+validation_csv: datasets/audio_embedding_charts_1000_300_300_validation.csv
+test_csv: datasets/audio_embedding_charts_1000_300_300_test.csv
+pattern_table: simai_pattern_chunks
+audio_table: simai_audio_chunks
+segment_table: simai_segments
+
+# Set model_path to null for an online build without embedded weights.
+model_id: OpenMuQ/MuQ-large-msd-iter
+model_path: /opt/models/MuQ-large-msd-iter
+device: cuda
+
+# Run identity and data loader settings.
+output_dir: outputs/audio_embedding_runs/muq_baseline
+seed: 20260715
+epochs: 20
+batch_size: 16
+validation_batch_size: 16
+num_workers: 4
+
+# Projection head and optimization.
+hidden_dimension: 1024
+dropout: 0.1
+learning_rate: 0.001
+temperature_learning_rate: 0.0001
+weight_decay: 0.0001
+initial_temperature: 0.07
+distillation_weight: 0.2
+gradient_clip: 1.0
+
+# Validation and retrieval metrics.
+validation_every: 1
+retrieval_block_size: 256
+
+# Set positive limits for a smaller deterministic subset; 0 means all records.
+max_train_samples: 0
+max_validation_samples: 0
+max_test_samples: 0
+skip_audio_file_check: false

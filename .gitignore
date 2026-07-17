@@ -1,0 +1,56 @@
+# Local configuration
+.env
+*.env
+!*.env.example
+deploy/linux/deploy.env
+deploy/windows/runtime.ps1
+
+# Python and editor state
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+.idea/
+.vscode/
+.DS_Store
+
+# Private or generated datasets
+chartdata*/
+datasets/
+data/
+outputs/
+audio_chunks/
+*.lance
+*.ldb
+
+# Audio and chart assets
+*.mp3
+*.ogg
+*.wav
+*.flac
+*.m4a
+*.maidata.txt
+
+# Models, experiments, and portable packages
+models/
+checkpoints/
+runs/
+packages/
+wandb/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.tar
+*.tar.*
+*.zip
+
+# Secrets and credentials
+*.pem
+*.key
+credentials*.json
+service-account*.json
