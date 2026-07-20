@@ -154,8 +154,8 @@ function Invoke-TrainingContainer {
 
 function Test-GpuRuntime {
     Require-Image
-    & docker run --rm --gpus $GpuDevices --entrypoint python $ImageName /opt/maiagent/scripts/check_rtx5090_runtime.py
-    Assert-LastExitCode "RTX 5090 CUDA and MuQ runtime check"
+    & docker run --rm --gpus $GpuDevices --entrypoint python $ImageName /opt/maiagent/scripts/check_cuda_runtime.py
+    Assert-LastExitCode "CUDA and MuQ runtime check"
 }
 
 function Test-Wsl2 {

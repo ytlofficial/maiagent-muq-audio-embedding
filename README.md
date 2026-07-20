@@ -109,12 +109,12 @@ The command creates an extracted complete bundle and a sibling `-transfer`
 directory containing checksum-protected `tar.gz` parts plus Windows/Linux
 restore scripts. Private data and generated packages remain ignored by Git.
 
-For one standalone archive aimed at Windows RTX 5090 machines, set
+For one standalone balanced archive, set
 `TRANSFER_MODE=single` and a distinct `BUNDLE_NAME`:
 
 ```bash
 TRANSFER_MODE=single \
-BUNDLE_NAME=maiagent-muq-audio-rtx5090-torch2.11.0-cu128-win64 \
+BUNDLE_NAME=maiagent-muq-audio-balanced-torch2.11.0-cu128 \
 DATA_SOURCE_ROOT=/absolute/path/to/private-data \
 OUTPUT_ROOT=/absolute/path/to/packages \
 scripts/package_complete_bundle.sh

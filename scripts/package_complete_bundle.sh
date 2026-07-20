@@ -59,7 +59,7 @@ mkdir -p \
   "${transfer_dir}"
 
 install -m 0644 "${repo_root}/deploy/complete-bundle/README.md" "${bundle_dir}/README.md"
-install -m 0644 "${repo_root}/deploy/complete-bundle/RTX5090_COMPATIBILITY.md" "${bundle_dir}/RTX5090_COMPATIBILITY.md"
+install -m 0644 "${repo_root}/deploy/complete-bundle/CUDA_COMPATIBILITY.md" "${bundle_dir}/CUDA_COMPATIBILITY.md"
 install -m 0755 "${repo_root}/deploy/complete-bundle/manage.sh" "${bundle_dir}/manage.sh"
 install -m 0644 "${repo_root}/deploy/complete-bundle/manage.cmd" "${bundle_dir}/manage.cmd"
 install -m 0644 "${repo_root}/deploy/complete-bundle/manage.ps1" "${bundle_dir}/manage.ps1"
@@ -112,8 +112,8 @@ docker run --rm --entrypoint python "${image_name}" -c \
   "import json, torch, torchvision, torchaudio, muq, lancedb, librosa; print(json.dumps({'python': __import__('sys').version.split()[0], 'torch': torch.__version__, 'torchvision': torchvision.__version__, 'torchaudio': torchaudio.__version__, 'cuda_runtime': torch.version.cuda, 'cuda_compiled': torch._C._cuda_getCompiledVersion(), 'compiled_arches': str(torch._C._cuda_getArchFlags()).split(), 'cudnn': torch.backends.cudnn.version(), 'muq': '0.1.0', 'lancedb': lancedb.__version__, 'librosa': librosa.__version__}, sort_keys=True))" \
   > "${bundle_dir}/runtime-versions.json"
 docker run --rm --entrypoint python "${image_name}" \
-  /opt/maiagent/scripts/check_rtx5090_runtime.py --static-only \
-  > "${bundle_dir}/rtx5090-static-report.json"
+  /opt/maiagent/scripts/check_cuda_runtime.py --static-only \
+  > "${bundle_dir}/cuda-static-report.json"
 
 python3 - "${bundle_dir}/data" "${bundle_dir}/data-inventory.json" <<'PY'
 import json
@@ -208,21 +208,28 @@ payload = {
         "validation_charts": 300,
         "test_charts": 300,
         "automatic_final_test": True,
+        "balanced_profile": {
+            "epochs": 30,
+            "batch_size": 32,
+            "validation_batch_size": 64,
+            "num_workers": 6,
+            "learning_rate": 0.001,
+            "retrieval_block_size": 512,
+            "shared_memory": "20g",
+            "doctor_audio_batch_size": 8,
+            "doctor_audio_seconds": 10,
+        },
     },
     "entrypoints": {
         "windows": "manage.cmd",
         "linux": "manage.sh",
     },
     "target": {
-        "host": "Windows 10/11 x86_64",
-        "container": "linux/amd64 via Docker Desktop WSL2",
-        "gpu": "NVIDIA GeForce RTX 5090",
-        "compute_capability": "12.0",
-        "required_native_arch": "sm_120",
-        "minimum_windows_driver": "570.65",
-        "recommended_windows_driver": "580.88",
+        "host": "Windows 10/11 or Linux x86_64",
+        "container": "linux/amd64",
+        "gpu": "NVIDIA GPU compatible with CUDA 12.8",
         "minimum_wsl": "2.1.5",
-        "static_compatibility_report": "rtx5090-static-report.json",
+        "static_compatibility_report": "cuda-static-report.json",
     },
 }
 Path(output).write_text(json.dumps(payload, ensure_ascii=True, indent=2) + "\n", encoding="utf-8")

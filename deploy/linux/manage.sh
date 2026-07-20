@@ -25,7 +25,7 @@ image_name="${IMAGE_NAME:-maiagent-muq-audio:torch2.11.0-cu128}"
 config_file="${CONFIG_FILE:-../../configs/training.example.yaml}"
 data_root="${DATA_ROOT:-}"
 gpu_devices="${GPU_DEVICES:-all}"
-shm_size="${SHM_SIZE:-16g}"
+shm_size="${SHM_SIZE:-20g}"
 tensorboard_port="${TENSORBOARD_PORT:-6006}"
 run_as_host_user="${RUN_AS_HOST_USER:-1}"
 include_weights="${INCLUDE_MUQ_WEIGHTS:-1}"
@@ -122,7 +122,7 @@ check_gpu() {
     --gpus "${gpu_devices}" \
     --entrypoint python \
     "${image_name}" \
-    /opt/maiagent/scripts/check_rtx5090_runtime.py
+    /opt/maiagent/scripts/check_cuda_runtime.py
 }
 
 print_help() {

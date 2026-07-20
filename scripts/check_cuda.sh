@@ -8,4 +8,4 @@ docker run --rm \
   --gpus "${gpu_devices}" \
   --entrypoint python \
   "${image_name}" \
-  /opt/maiagent/scripts/check_rtx5090_runtime.py
+  /opt/maiagent/scripts/check_cuda_runtime.py

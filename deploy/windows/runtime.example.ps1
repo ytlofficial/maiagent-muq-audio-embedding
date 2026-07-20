@@ -3,7 +3,7 @@ $DataRoot = "D:\path\to\audio-embedding-data"
 
 $ImageName = "maiagent-muq-audio:torch2.11.0-cu128"
 $GpuDevices = "all"
-$ShmSize = "16g"
+$ShmSize = "20g"
 $TensorBoardPort = 6006
 $TrainingConfig = "configs\training.example.yaml"
 

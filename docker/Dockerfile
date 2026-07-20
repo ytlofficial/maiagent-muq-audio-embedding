@@ -44,7 +44,7 @@ RUN if [ "${INCLUDE_MUQ_WEIGHTS}" = "1" ]; then \
     fi
 
 COPY scripts/audio_embedding_dataset.py /opt/maiagent/scripts/audio_embedding_dataset.py
-COPY scripts/check_rtx5090_runtime.py /opt/maiagent/scripts/check_rtx5090_runtime.py
+COPY scripts/check_cuda_runtime.py /opt/maiagent/scripts/check_cuda_runtime.py
 COPY scripts/muq_audio_training.py /opt/maiagent/scripts/muq_audio_training.py
 COPY scripts/train_muq_audio_embedding.py /opt/maiagent/scripts/train_muq_audio_embedding.py
 

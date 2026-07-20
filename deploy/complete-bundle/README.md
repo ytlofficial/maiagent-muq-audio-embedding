@@ -23,12 +23,16 @@ data/
 
 镜像固定为 PyTorch 2.11.0、torchvision 0.26.0、torchaudio 2.11.0、CUDA
 12.8、cuDNN 9、MuQ 0.1.0，并内置 `OpenMuQ/MuQ-large-msd-iter` 权重。
-详细兼容性边界与验收项目见 `RTX5090_COMPATIBILITY.md`。
+详细兼容性边界与验收项目见 `CUDA_COMPATIBILITY.md`。
 
-## Windows 10/11 + RTX 5090
+默认采用稳健高吞吐训练档：30 epochs、batch 32、validation batch 64、6 workers、
+learning rate 0.001。它不会把 GPU 显存压满；若目标机显存较小，可临时降到
+`--batch-size 16 --validation-batch-size 32`。
 
-安装最新 NVIDIA Windows 驱动（最低 `570.65`，建议 `580.88` 或更新）、WSL
-`2.1.5+` 和 Docker Desktop。启用 WSL2 backend 与 Linux containers，然后运行：
+## Windows 10/11 + NVIDIA GPU
+
+安装支持 CUDA 12.8 的 NVIDIA Windows 驱动、WSL `2.1.5+` 和 Docker Desktop。
+启用 WSL2 backend 与 Linux containers，然后运行：
 
 ```powershell
 .\manage.cmd verify
@@ -51,10 +55,9 @@ chmod +x manage.sh
 ./manage.sh train
 ```
 
-`doctor` 会检查 RTX 5090 型号、计算能力 12.0、原生 `sm_120` 内核、驱动、
-FP16/BF16 矩阵计算、反向传播、MuQ CUDA 前向、三份 split、LanceDB 三表联结以及
-每个音频路径。`smoke` 会真正跑一轮小规模 CUDA 训练。只有这两步通过后才建议开始
-完整训练。
+`doctor` 会检查 CUDA GPU、PyTorch/CUDA 版本、FP16/BF16 矩阵计算、反向传播、
+MuQ CUDA 前向、三份 split、LanceDB 三表联结以及每个音频路径。`smoke` 会真正跑
+一轮小规模 CUDA 训练。只有这两步通过后才建议开始完整训练。
 
 ## 参数修改
 

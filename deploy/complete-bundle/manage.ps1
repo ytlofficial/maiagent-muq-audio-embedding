@@ -11,7 +11,7 @@ $ImageName = "maiagent-muq-audio:torch2.11.0-cu128"
 $ImageArchive = Join-Path $BundleDir "image\maiagent-muq-audio-torch2.11.0-cu128-linux-amd64.tar"
 $ImageChecksum = "$ImageArchive.sha256"
 $GpuDevices = if ($env:GPU_DEVICES) { $env:GPU_DEVICES } else { "all" }
-$ShmSize = if ($env:SHM_SIZE) { $env:SHM_SIZE } else { "16g" }
+$ShmSize = if ($env:SHM_SIZE) { $env:SHM_SIZE } else { "20g" }
 $TensorBoardPort = if ($env:TENSORBOARD_PORT) { $env:TENSORBOARD_PORT } else { 6006 }
 
 function Stop-WithError {
@@ -126,8 +126,8 @@ function Invoke-TrainingContainer {
 
 function Test-GpuRuntime {
     Require-Image
-    & docker run --rm --gpus $GpuDevices --entrypoint python $ImageName /opt/maiagent/scripts/check_rtx5090_runtime.py
-    Assert-LastExitCode "RTX 5090 CUDA and MuQ runtime check"
+    & docker run --rm --gpus $GpuDevices --entrypoint python $ImageName /opt/maiagent/scripts/check_cuda_runtime.py
+    Assert-LastExitCode "CUDA and MuQ runtime check"
 }
 
 function Test-Wsl2 {

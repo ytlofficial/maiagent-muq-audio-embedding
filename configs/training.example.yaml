@@ -15,10 +15,10 @@ device: cuda
 # Run identity and data loader settings.
 output_dir: outputs/audio_embedding_runs/muq_baseline
 seed: 20260715
-epochs: 20
-batch_size: 16
-validation_batch_size: 16
-num_workers: 4
+epochs: 30
+batch_size: 32
+validation_batch_size: 64
+num_workers: 6
 
 # Projection head and optimization.
 hidden_dimension: 1024
@@ -32,7 +32,7 @@ gradient_clip: 1.0
 
 # Validation and retrieval metrics.
 validation_every: 1
-retrieval_block_size: 256
+retrieval_block_size: 512
 
 # Set positive limits for a smaller deterministic subset; 0 means all records.
 max_train_samples: 0

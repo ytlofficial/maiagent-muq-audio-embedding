@@ -34,10 +34,10 @@ class TrainingConfig:
     model_id: str = "OpenMuQ/MuQ-large-msd-iter"
     model_path: Path | None = None
     device: str = "auto"
-    epochs: int = 20
-    batch_size: int = 16
-    validation_batch_size: int = 16
-    num_workers: int = 4
+    epochs: int = 30
+    batch_size: int = 32
+    validation_batch_size: int = 64
+    num_workers: int = 6
     learning_rate: float = 1e-3
     temperature_learning_rate: float = 1e-4
     weight_decay: float = 1e-4
@@ -47,7 +47,7 @@ class TrainingConfig:
     dropout: float = 0.1
     gradient_clip: float = 1.0
     validation_every: int = 1
-    retrieval_block_size: int = 256
+    retrieval_block_size: int = 512
     seed: int = 20260715
     resume: Path | None = None
 
