@@ -4,13 +4,15 @@ $TrainingArgs = if ($RawArguments.Count -gt 1) { @($RawArguments[1..($RawArgumen
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$DeployDir = $PSScriptRoot
-$RepoRoot = [IO.Path]::GetFullPath((Join-Path $DeployDir "..\.."))
-$RuntimeConfigPath = if ($env:MAIAGENT_DEPLOY_CONFIG) {
-    [IO.Path]::GetFullPath($env:MAIAGENT_DEPLOY_CONFIG)
-} else {
-    Join-Path $DeployDir "runtime.ps1"
-}
+$BundleDir = $PSScriptRoot
+$DataRoot = Join-Path $BundleDir "data"
+$TrainingConfig = Join-Path $BundleDir "training.yaml"
+$ImageName = "maiagent-muq-audio:torch2.11.0-cu128"
+$ImageArchive = Join-Path $BundleDir "image\maiagent-muq-audio-torch2.11.0-cu128-linux-amd64.tar"
+$ImageChecksum = "$ImageArchive.sha256"
+$GpuDevices = if ($env:GPU_DEVICES) { $env:GPU_DEVICES } else { "all" }
+$ShmSize = if ($env:SHM_SIZE) { $env:SHM_SIZE } else { "16g" }
+$TensorBoardPort = if ($env:TENSORBOARD_PORT) { $env:TENSORBOARD_PORT } else { 6006 }
 
 function Stop-WithError {
     param([string]$Message)
@@ -32,33 +34,6 @@ function Require-Command {
     }
 }
 
-if (-not (Test-Path -LiteralPath $RuntimeConfigPath -PathType Leaf)) {
-    Stop-WithError "Create deploy\windows\runtime.ps1 from runtime.example.ps1 and set `$DataRoot"
-}
-. $RuntimeConfigPath
-
-$RequiredVariables = @(
-    "DataRoot", "ImageName", "GpuDevices", "ShmSize", "TensorBoardPort",
-    "TrainingConfig", "IncludeMuQWeights", "MuQModelId", "PypiIndexUrl",
-    "PytorchIndexUrl", "HfHubOffline", "TransformersOffline"
-)
-foreach ($VariableName in $RequiredVariables) {
-    if (-not (Get-Variable -Name $VariableName -ErrorAction SilentlyContinue)) {
-        Stop-WithError "Missing runtime setting: `$${VariableName}"
-    }
-}
-
-function Resolve-RepoPath {
-    param([string]$PathValue)
-    if ([IO.Path]::IsPathRooted($PathValue)) {
-        return [IO.Path]::GetFullPath($PathValue)
-    }
-    return [IO.Path]::GetFullPath((Join-Path $RepoRoot $PathValue))
-}
-
-$TrainingConfigPath = Resolve-RepoPath $TrainingConfig
-$script:ResolvedDataRoot = $null
-
 function Require-Docker {
     Require-Command "docker"
     & docker info *> $null
@@ -76,57 +51,54 @@ function Require-LinuxContainers {
 function Require-Image {
     & docker image inspect $ImageName *> $null
     if ($LASTEXITCODE -ne 0) {
-        Stop-WithError "Image $ImageName is unavailable. Run .\deploy\windows\manage.cmd build"
+        Stop-WithError "Image $ImageName is not loaded. Run .\manage.cmd load"
     }
 }
 
-function Resolve-DataRoot {
-    if ([string]::IsNullOrWhiteSpace($DataRoot)) {
-        Stop-WithError "Set `$DataRoot in runtime.ps1"
+function Test-DataLayout {
+    $RequiredPaths = @(
+        "datasets\audio_embedding_charts_1000_300_300_train.csv",
+        "datasets\audio_embedding_charts_1000_300_300_validation.csv",
+        "datasets\audio_embedding_charts_1000_300_300_test.csv",
+        "outputs\lancedb\simai_pattern_chunks",
+        "outputs\audio_chunks\simai_audio_chunks"
+    )
+    if (-not (Test-Path -LiteralPath $TrainingConfig -PathType Leaf)) {
+        Stop-WithError "Training configuration is missing: $TrainingConfig"
     }
-    if (-not [IO.Path]::IsPathRooted($DataRoot)) {
-        Stop-WithError "DataRoot must be an absolute Windows path"
-    }
-    if ($DataRoot.Contains(",")) {
-        Stop-WithError "DataRoot cannot contain a comma because Docker --mount uses comma separators"
-    }
-    if (-not (Test-Path -LiteralPath $DataRoot -PathType Container)) {
-        Stop-WithError "DataRoot is not a directory: $DataRoot"
-    }
-    $script:ResolvedDataRoot = (Resolve-Path -LiteralPath $DataRoot).Path
-}
-
-function Test-RuntimePaths {
-    Resolve-DataRoot
-    if (-not (Test-Path -LiteralPath $TrainingConfigPath -PathType Leaf)) {
-        Stop-WithError "Training configuration was not found: $TrainingConfigPath"
+    foreach ($RelativePath in $RequiredPaths) {
+        $FullPath = Join-Path $DataRoot $RelativePath
+        if (-not (Test-Path -LiteralPath $FullPath)) {
+            Stop-WithError "Data path is missing: $FullPath"
+        }
     }
 }
 
-function Build-Image {
-    Require-Docker
-    Require-LinuxContainers
-    & docker build `
-        --platform "linux/amd64" `
-        --file (Join-Path $RepoRoot "docker\Dockerfile") `
-        --tag $ImageName `
-        --build-arg "INCLUDE_MUQ_WEIGHTS=$IncludeMuQWeights" `
-        --build-arg "MUQ_MODEL_ID=$MuQModelId" `
-        --build-arg "PYPI_INDEX_URL=$PypiIndexUrl" `
-        --build-arg "PYTORCH_INDEX_URL=$PytorchIndexUrl" `
-        $RepoRoot
-    Assert-LastExitCode "Docker image build"
+function Test-ImageArchive {
+    if (-not (Test-Path -LiteralPath $ImageArchive -PathType Leaf)) {
+        Stop-WithError "Image archive is missing: $ImageArchive"
+    }
+    if (-not (Test-Path -LiteralPath $ImageChecksum -PathType Leaf)) {
+        Stop-WithError "Image checksum is missing: $ImageChecksum"
+    }
+    $Expected = ((Get-Content -LiteralPath $ImageChecksum -Raw).Trim() -split "\s+")[0].ToLowerInvariant()
+    Write-Host "Calculating Docker image archive SHA-256..."
+    $Actual = (Get-FileHash -LiteralPath $ImageArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($Actual -ne $Expected) {
+        Stop-WithError "Image archive checksum mismatch. Expected $Expected, got $Actual"
+    }
+    Write-Host "image_archive_checksum=OK"
 }
 
 function Get-CommonDockerArguments {
     return @(
         "run", "--rm", "--init",
         "--shm-size", $ShmSize,
-        "--mount", "type=bind,source=$script:ResolvedDataRoot,target=/workspace",
-        "--mount", "type=bind,source=$TrainingConfigPath,target=/deploy/training.yaml,readonly",
+        "--mount", "type=bind,source=$DataRoot,target=/workspace",
+        "--mount", "type=bind,source=$TrainingConfig,target=/deploy/training.yaml,readonly",
         "--workdir", "/workspace",
-        "--env", "HF_HUB_OFFLINE=$HfHubOffline",
-        "--env", "TRANSFORMERS_OFFLINE=$TransformersOffline",
+        "--env", "HF_HUB_OFFLINE=1",
+        "--env", "TRANSFORMERS_OFFLINE=1",
         "--env", "PYTHONUNBUFFERED=1"
     )
 }
@@ -136,7 +108,7 @@ function Invoke-TrainingContainer {
         [bool]$UseGpu,
         [string[]]$ExtraArguments
     )
-    Test-RuntimePaths
+    Test-DataLayout
     Require-Image
     $DockerArguments = @(Get-CommonDockerArguments)
     if ($UseGpu) {
@@ -166,31 +138,40 @@ function Test-Wsl2 {
 
 function Show-Help {
     @"
-Usage: .\deploy\windows\manage.cmd ACTION [training CLI overrides]
+Usage: .\manage.cmd ACTION [training CLI overrides]
 
 Actions:
-  build        Build the CUDA image from this repository.
-  doctor       Check WSL2, Linux containers, CUDA, DB joins, and audio paths.
-  dry-run      Validate metadata without loading MuQ or CUDA.
+  verify       Verify the bundled image and required data layout.
+  load         Verify and load the bundled Docker image.
+  doctor       Check WSL2, CUDA, DB joins, and every audio path.
+  dry-run      Validate all metadata and files without loading MuQ or CUDA.
   smoke        Run a small one-epoch CUDA training test.
-  train        Start full training from the YAML configuration.
-  resume PATH  Resume a checkpoint path relative to DataRoot.
-  tensorboard  Serve run logs on TensorBoardPort.
-  config       Print resolved runtime and training configuration.
-  shell        Open a CUDA shell with DataRoot mounted at /workspace.
-  help         Show this message.
+  train        Start full training from training.yaml.
+  resume PATH  Resume a checkpoint path relative to the bundled data root.
+  tensorboard  Serve run logs on TENSORBOARD_PORT (default 6006).
+  config       Print resolved paths and training configuration.
+  shell        Open a CUDA shell with bundled data mounted at /workspace.
 "@
 }
 
 switch ($Action.ToLowerInvariant()) {
-    "build" {
-        Build-Image
+    "verify" {
+        Test-ImageArchive
+        Test-DataLayout
+        Write-Host "bundle_verify_complete"
+    }
+    "load" {
+        Require-Docker
+        Require-LinuxContainers
+        Test-ImageArchive
+        & docker image load --input $ImageArchive
+        Assert-LastExitCode "Docker image load"
     }
     "doctor" {
         Test-Wsl2
         Require-Docker
         Require-LinuxContainers
-        Test-RuntimePaths
+        Test-DataLayout
         Test-GpuRuntime
         Invoke-TrainingContainer $false @("--dry-run")
         Write-Host "doctor_complete"
@@ -213,11 +194,11 @@ switch ($Action.ToLowerInvariant()) {
     }
     "resume" {
         if ($TrainingArgs.Count -eq 0) {
-            Stop-WithError "resume requires a checkpoint path relative to DataRoot"
+            Stop-WithError "resume requires a checkpoint path relative to the bundled data root"
         }
         $Checkpoint = ([string]$TrainingArgs[0]).Replace("\", "/")
         if ([IO.Path]::IsPathRooted($Checkpoint)) {
-            Stop-WithError "Use a checkpoint path relative to DataRoot"
+            Stop-WithError "Use a checkpoint path relative to the bundled data root"
         }
         $LastSlash = $Checkpoint.LastIndexOf("/")
         if ($LastSlash -lt 1) {
@@ -235,7 +216,7 @@ switch ($Action.ToLowerInvariant()) {
     "tensorboard" {
         Require-Docker
         Require-LinuxContainers
-        Test-RuntimePaths
+        Test-DataLayout
         Require-Image
         $DockerArguments = @(Get-CommonDockerArguments)
         $DockerArguments += @(
@@ -250,21 +231,20 @@ switch ($Action.ToLowerInvariant()) {
         Assert-LastExitCode "TensorBoard container"
     }
     "config" {
-        Write-Host "RUNTIME_CONFIG=$RuntimeConfigPath"
+        Write-Host "BUNDLE_DIR=$BundleDir"
         Write-Host "DATA_ROOT=$DataRoot"
         Write-Host "IMAGE_NAME=$ImageName"
-        Write-Host "TRAINING_CONFIG=$TrainingConfigPath"
+        Write-Host "IMAGE_ARCHIVE=$ImageArchive"
         Write-Host "GPU_DEVICES=$GpuDevices"
         Write-Host "SHM_SIZE=$ShmSize"
         Write-Host "TENSORBOARD_PORT=$TensorBoardPort"
-        Write-Host "INCLUDE_MUQ_WEIGHTS=$IncludeMuQWeights"
         Write-Host ""
-        Get-Content -LiteralPath $TrainingConfigPath
+        Get-Content -LiteralPath $TrainingConfig
     }
     "shell" {
         Require-Docker
         Require-LinuxContainers
-        Test-RuntimePaths
+        Test-DataLayout
         Require-Image
         $DockerArguments = @(Get-CommonDockerArguments)
         $DockerArguments += @("-it", "--gpus", $GpuDevices, "--entrypoint", "bash", $ImageName)

@@ -46,7 +46,7 @@ can train offline. No weight file is stored in Git.
 ```bash
 docker build \
   --file docker/Dockerfile \
-  --tag maiagent-muq-audio:torch2.5.1-cu124 \
+  --tag maiagent-muq-audio:torch2.11.0-cu128 \
   --build-arg INCLUDE_MUQ_WEIGHTS=1 \
   .
 ```
@@ -93,6 +93,32 @@ Copy-Item deploy\windows\runtime.example.ps1 deploy\windows\runtime.ps1
 See [docs/linux-deployment.md](docs/linux-deployment.md) and
 [docs/windows-wsl2.md](docs/windows-wsl2.md) for host requirements and runtime
 commands.
+
+## Build a complete transferable experiment bundle
+
+After building and validating the image, package the image, MuQ weights, split
+CSVs, LanceDB, and audio chunks together:
+
+```bash
+DATA_SOURCE_ROOT=/absolute/path/to/private-data \
+OUTPUT_ROOT=/absolute/path/to/packages \
+scripts/package_complete_bundle.sh
+```
+
+The command creates an extracted complete bundle and a sibling `-transfer`
+directory containing checksum-protected `tar.gz` parts plus Windows/Linux
+restore scripts. Private data and generated packages remain ignored by Git.
+
+For one standalone archive aimed at Windows RTX 5090 machines, set
+`TRANSFER_MODE=single` and a distinct `BUNDLE_NAME`:
+
+```bash
+TRANSFER_MODE=single \
+BUNDLE_NAME=maiagent-muq-audio-rtx5090-torch2.11.0-cu128-win64 \
+DATA_SOURCE_ROOT=/absolute/path/to/private-data \
+OUTPUT_ROOT=/absolute/path/to/packages \
+scripts/package_complete_bundle.sh
+```
 
 ## Local checks
 

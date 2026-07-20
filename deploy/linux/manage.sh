@@ -21,7 +21,7 @@ if [[ -f "${env_file}" ]]; then
   set +a
 fi
 
-image_name="${IMAGE_NAME:-maiagent-muq-audio:torch2.5.1-cu124}"
+image_name="${IMAGE_NAME:-maiagent-muq-audio:torch2.11.0-cu128}"
 config_file="${CONFIG_FILE:-../../configs/training.example.yaml}"
 data_root="${DATA_ROOT:-}"
 gpu_devices="${GPU_DEVICES:-all}"
@@ -31,6 +31,7 @@ run_as_host_user="${RUN_AS_HOST_USER:-1}"
 include_weights="${INCLUDE_MUQ_WEIGHTS:-1}"
 model_id="${MUQ_MODEL_ID:-OpenMuQ/MuQ-large-msd-iter}"
 pypi_index_url="${PYPI_INDEX_URL:-https://pypi.org/simple}"
+pytorch_index_url="${PYTORCH_INDEX_URL:-https://download.pytorch.org/whl/cu128}"
 hf_hub_offline="${HF_HUB_OFFLINE:-1}"
 transformers_offline="${TRANSFORMERS_OFFLINE:-1}"
 
@@ -70,11 +71,13 @@ check_runtime_paths() {
 build_image() {
   require_docker
   docker build \
+    --platform linux/amd64 \
     --file "${repo_root}/docker/Dockerfile" \
     --tag "${image_name}" \
     --build-arg "INCLUDE_MUQ_WEIGHTS=${include_weights}" \
     --build-arg "MUQ_MODEL_ID=${model_id}" \
     --build-arg "PYPI_INDEX_URL=${pypi_index_url}" \
+    --build-arg "PYTORCH_INDEX_URL=${pytorch_index_url}" \
     "${repo_root}"
 }
 
@@ -119,7 +122,7 @@ check_gpu() {
     --gpus "${gpu_devices}" \
     --entrypoint python \
     "${image_name}" \
-    -c "import torch, torchaudio, muq; assert torch.cuda.is_available(); print({'torch': torch.__version__, 'cuda_runtime': torch.version.cuda, 'gpu': torch.cuda.get_device_name(0), 'torchaudio': torchaudio.__version__, 'muq': 'ok'})"
+    /opt/maiagent/scripts/check_rtx5090_runtime.py
 }
 
 print_help() {

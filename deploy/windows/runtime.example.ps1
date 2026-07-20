@@ -1,7 +1,7 @@
 # Absolute path to the separately transferred private data package.
 $DataRoot = "D:\path\to\audio-embedding-data"
 
-$ImageName = "maiagent-muq-audio:torch2.5.1-cu124"
+$ImageName = "maiagent-muq-audio:torch2.11.0-cu128"
 $GpuDevices = "all"
 $ShmSize = "16g"
 $TensorBoardPort = 6006
@@ -11,5 +11,6 @@ $TrainingConfig = "configs\training.example.yaml"
 $IncludeMuQWeights = "1"
 $MuQModelId = "OpenMuQ/MuQ-large-msd-iter"
 $PypiIndexUrl = "https://pypi.org/simple"
+$PytorchIndexUrl = "https://download.pytorch.org/whl/cu128"
 $HfHubOffline = "1"
 $TransformersOffline = "1"

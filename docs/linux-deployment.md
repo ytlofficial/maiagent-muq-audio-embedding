@@ -3,12 +3,12 @@
 ## Host requirements
 
 - Linux x86-64
-- NVIDIA driver compatible with CUDA 12.4
+- NVIDIA driver compatible with CUDA 12.8
 - Docker Engine
 - NVIDIA Container Toolkit
 - Enough local storage for the Docker image, private data, and checkpoints
 
-The image provides Python, PyTorch 2.5.1, CUDA 12.4 runtime, torchaudio, MuQ,
+The image provides Python, PyTorch 2.11.0, CUDA 12.8 runtime, torchaudio, MuQ,
 FFmpeg, LanceDB, librosa, and TensorBoard.
 
 ## Configure and run
