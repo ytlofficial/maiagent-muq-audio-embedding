@@ -1,8 +1,9 @@
 # MaiAgent MuQ Audio Embedding
 
-This repository trains an audio tower in an existing 512-dimensional chart
-embedding space. MuQ remains frozen; only a metadata-conditioned projection
-head and the contrastive temperature are optimized.
+This repository builds the Simai chart-side training inputs and trains an audio
+tower in the resulting 512-dimensional chart embedding space. MuQ remains
+frozen; only a metadata-conditioned projection head and the contrastive
+temperature are optimized.
 
 The repository contains code, tests, example configuration, and deployment
 entrypoints only. It intentionally excludes chart files, source audio, audio
@@ -12,7 +13,13 @@ machine-specific configuration.
 ## Training flow
 
 ```text
-split CSV + LanceDB chart/audio/segment tables
+maidata / exported Simai charts
+  -> measure timeline compiler and note counter
+  -> density-aware segmentation and six-dimensional segment scores
+  -> four-measure structural chart embeddings
+  -> optional TruncatedSVD projection to 512-D teacher vectors
+  -> LanceDB chart/audio/segment tables
+  -> song-disjoint split CSVs
   -> strict key joins and song-disjoint split checks
   -> 24 kHz mono waveform
   -> frozen MuQ FP32 frame features
@@ -24,7 +31,8 @@ split CSV + LanceDB chart/audio/segment tables
   -> best.pt evaluates the untouched test split
 ```
 
-See [DATA_CONTRACT.md](DATA_CONTRACT.md) for the required, data-free schema.
+See [DATA_CONTRACT.md](DATA_CONTRACT.md) for the required, data-free runtime
+schema and [docs/usage.md](docs/usage.md) for the preprocessing scripts.
 
 ## Repository layout
 
@@ -33,10 +41,36 @@ configs/             editable training configuration
 deploy/linux/        Linux Docker management entrypoint
 deploy/windows/      Windows + Docker Desktop/WSL2 entrypoint
 docker/              CUDA image definition and pinned dependencies
-docs/                deployment notes
-scripts/             dataset loader, model, trainer, and model cache utility
-tests/               metadata, objective, sampler, and training tests
+docs/                deployment notes, scoring formulas, preprocessing usage
+scripts/             Simai preprocessing, LanceDB builders, dataset loader, trainer
+simai_machine_readable_spec/
+                     Simai grammar/spec artifacts used by the parser
+tests/               parser, embedding, metadata, objective, sampler, and training tests
 ```
+
+## Preprocessing overview
+
+The upstream chart algorithm is stored in `scripts/` and is intentionally
+data-free:
+
+- `simai_measure_compiler.py` compiles Simai timeline slots into measures and
+  time ranges.
+- `simai_note_counter.py`, `simai_measure_density.py`, and
+  `simai_density_segmenter.py` parse notes, compute density curves, and build
+  five density-aware segments.
+- `simai_global_six_dimension_table.py` and `simai_segment_scorer.py` compute
+  the `note`, `peak`, `charge`, `slide`, `handtrip`, and `tricky` scores.
+- `simai_pattern_embedding.py` builds the raw structural four-measure chart
+  embeddings.
+- `rebuild_full_pattern_embedding_lancedb_svd512.py` projects raw chart
+  embeddings into the 512-D teacher space used by audio training.
+- `build_segment_chunk_lancedb.py`, `build_segment_chunk_audio_lancedb.py`,
+  and `split_audio_embedding_charts.py` assemble the training LanceDB tables
+  and song-disjoint CSV splits.
+
+The generated datasets, source audio, LanceDB files, and checkpoints stay out
+of Git by design; the algorithms and contracts needed to recreate them are in
+this repository.
 
 ## Build the CUDA image
 
@@ -122,7 +156,9 @@ scripts/package_complete_bundle.sh
 
 ## Local checks
 
-The lightweight tests do not require MuQ or CUDA. Torch-specific tests run when
+The lightweight parser, scoring, and preprocessing tests do not require MuQ or
+CUDA. LanceDB writers are tested through pure row-building helpers; full table
+writes need the Docker/runtime dependencies. Torch-specific tests run when
 PyTorch is available.
 
 ```bash

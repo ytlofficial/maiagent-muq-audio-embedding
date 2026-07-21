@@ -1,0 +1,712 @@
+{
+  "spec_id": "simai-official-core-machine-spec",
+  "archive_version": "1.0.0",
+  "archive_language": "zh-CN",
+  "generated_at": "2026-06-30",
+  "normative_scope": {
+    "included": [
+      "Celeca-defined official simai chart notation",
+      "button and sensor positions",
+      "timeline controls",
+      "TAP, HOLD, SLIDE, TOUCH, TOUCH HOLD",
+      "BREAK, EACH, EX and officially documented special notation",
+      "slide-shape endpoint validation",
+      "legacy maidata.txt envelope as a non-core appendix"
+    ],
+    "excluded": [
+      "Majdata-specific extensions",
+      "AstroDX/SimaiSharp/other simulator-specific syntax",
+      "undocumented permissive parser behavior",
+      "gameplay scoring formulas",
+      "official-maimai binary chart formats"
+    ],
+    "strictness_profiles": {
+      "strict_core": "Accept only combinations explicitly defined by the source pages and reject unresolved ambiguity.",
+      "compatibility": "Parse uncertain combinations when tokenizable, preserve source text, and emit warnings.",
+      "round_trip": "Preserve whitespace, modifier order, aliases and unknown nodes for lossless rewriting."
+    }
+  },
+  "sources": {
+    "primary_english": {
+      "title": "Notations of simai",
+      "url": "https://w.atwiki.jp/simai/pages/1003.html",
+      "last_updated_on_page": "2023-07-25",
+      "scope": "Celeca-defined official simai chart notation; excludes simulator-specific extensions"
+    },
+    "primary_japanese": {
+      "title": "simai語の譜面書式",
+      "url": "https://w.atwiki.jp/simai/pages/1002.html",
+      "scope": "Japanese counterpart; includes a 2026-03-24 update concerning non-center TOUCH HOLDs"
+    },
+    "legacy_maidata_container": {
+      "title": "maidata.txt内で使用する変数名",
+      "url": "https://w.atwiki.jp/simai/pages/510.html",
+      "last_updated_on_page": "2019-09-12",
+      "scope": "Legacy 3simai maidata.txt variables; not part of the pure chart-notation grammar"
+    },
+    "slide_endpoint_table": {
+      "url": "https://img.atwiki.jp/simai/attach/1003/54/slides_eng.png",
+      "scope": "Official shape endpoint compatibility table"
+    },
+    "sensor_layout": {
+      "url": "https://img.atwiki.jp/simai/attach/1003/52/bg.jpg",
+      "scope": "Sensor-area layout"
+    }
+  },
+  "lexical": {
+    "encoding": "UTF-8 recommended",
+    "core_symbols_are_ascii": true,
+    "ignored_between_tokens": [
+      "SPACE",
+      "TAB",
+      "CR",
+      "LF"
+    ],
+    "number": {
+      "grammar": "[0-9]+(?:\\.[0-9]+)?",
+      "scientific_notation": false,
+      "sign": "not documented; strict parser should reject signs",
+      "constraints": "BPM, divider, count and duration are normally positive; exact waiting time may be zero in tolerant mode."
+    },
+    "button": {
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "numbering": "clockwise; button 1 is approximately at one o'clock"
+    },
+    "sensor": {
+      "canonical": [
+        "A1-A8",
+        "B1-B8",
+        "C",
+        "D1-D8",
+        "E1-E8"
+      ],
+      "aliases": {
+        "C1": "C",
+        "C2": "C"
+      },
+      "invalid_in_strict_core": [
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "C7",
+        "C8"
+      ],
+      "numbering": "A/B/D/E are numbered clockwise"
+    },
+    "reserved": {
+      "slot_separator": ",",
+      "chart_end": "E",
+      "exact_each_separator": "/",
+      "pseudo_each_separator": "`",
+      "multiple_slide_separator": "*",
+      "bpm_delimiters": [
+        "(",
+        ")"
+      ],
+      "divider_delimiters": [
+        "{",
+        "}"
+      ],
+      "duration_delimiters": [
+        "[",
+        "]"
+      ]
+    }
+  },
+  "timeline": {
+    "document_model": "A chart is a sequence of zero or more slot definitions followed by E.",
+    "cursor_start": "maidata first value in seconds; if unavailable, supplied externally by the host.",
+    "slot": {
+      "structure": "zero or more timing directives, optional note group, then comma",
+      "event_time": "notes in the slot occur at the current cursor before advancement",
+      "advance": "each comma advances the cursor by the currently active per-comma duration",
+      "whitespace": "ignored while parsing"
+    },
+    "directives": {
+      "bpm": {
+        "syntax": "(B)",
+        "example": "(174)",
+        "semantics": "Set current BPM to B.",
+        "decimal_allowed": true
+      },
+      "musical_divider": {
+        "syntax": "{T}",
+        "example": "{16}",
+        "semantics": "Set per-comma duration to one T-th note at current BPM.",
+        "formula_seconds": "240 / current_bpm / T",
+        "requires_current_bpm": true,
+        "ordering_rule": "When BPM and divider are initialized together, BPM must precede divider."
+      },
+      "exact_seconds_divider": {
+        "syntax": "{#S}",
+        "example": "{#0.35}",
+        "semantics": "Set per-comma duration directly to S seconds.",
+        "requires_current_bpm": false
+      }
+    },
+    "termination": {
+      "syntax": "E",
+      "strict_required": true,
+      "semantics": "End at the current cursor after all preceding commas have advanced time."
+    },
+    "pseudo_each": {
+      "syntax": "group`group[`group...]",
+      "offset_seconds_per_separator": 0.001,
+      "example": "1`2`3/4,",
+      "semantics": [
+        "First group occurs at slot time.",
+        "Each following backtick group is delayed by one additional millisecond.",
+        "Slash notes in the same group are exactly simultaneous.",
+        "Backtick-separated groups are not EACH and do not become yellow."
+      ],
+      "slot_advance_unchanged": true
+    }
+  },
+  "duration_expressions": {
+    "musical": {
+      "syntax": "[T:N]",
+      "seconds": "N * 240 / current_bpm / T",
+      "example": "[8:3]"
+    },
+    "exact_seconds": {
+      "syntax": "[#S]",
+      "seconds": "S",
+      "allowed_for": [
+        "HOLD",
+        "TOUCH_HOLD"
+      ],
+      "example": "[#5.678]"
+    },
+    "bpm_override_musical": {
+      "syntax": "[B#T:N]",
+      "seconds": "N * 240 / B / T",
+      "allowed_for": [
+        "HOLD",
+        "TOUCH_HOLD",
+        "SLIDE"
+      ],
+      "slide_wait_seconds": "60 / B",
+      "example": "[150#2:1]"
+    },
+    "slide_bpm_wait_exact_trace": {
+      "syntax": "[B#S]",
+      "trace_seconds": "S",
+      "wait_seconds": "60 / B",
+      "allowed_for": [
+        "SLIDE"
+      ],
+      "example": "[160#2]"
+    },
+    "slide_exact_wait_exact_trace": {
+      "syntax": "[W##S]",
+      "wait_seconds": "W",
+      "trace_seconds": "S",
+      "example": "[3##1.5]"
+    },
+    "slide_exact_wait_current_bpm_trace": {
+      "syntax": "[W##T:N]",
+      "wait_seconds": "W",
+      "trace_seconds": "N * 240 / current_bpm / T",
+      "example": "[3##8:3]"
+    },
+    "slide_exact_wait_override_bpm_trace": {
+      "syntax": "[W##B#T:N]",
+      "wait_seconds": "W",
+      "trace_seconds": "N * 240 / B / T",
+      "example": "[3##160#8:3]"
+    }
+  },
+  "notes": {
+    "tap": {
+      "base_syntax": "<button>",
+      "examples": [
+        "1",
+        "5"
+      ],
+      "modifiers": {
+        "b": "BREAK TAP",
+        "x": "EX TAP",
+        "$": "star-shaped TAP",
+        "$$": "rotating star-shaped TAP"
+      },
+      "modifier_order": "b, x and the selected star token may be written in any order where documented.",
+      "constraints": [
+        "$ and $$ are mutually exclusive tokens.",
+        "A plain TAP is a button note; sensor notation creates TOUCH instead."
+      ]
+    },
+    "hold": {
+      "base_syntax": "<button><mods>[duration]",
+      "required_modifier": "h",
+      "optional_modifiers": {
+        "b": "BREAK HOLD",
+        "x": "EX HOLD"
+      },
+      "modifier_order": "h, b and x may be written in any order.",
+      "examples": [
+        "5h[2:1]",
+        "4h[#5.678]",
+        "4h[150#2:1]",
+        "5bhx[2:1]"
+      ],
+      "pseudo_hold": {
+        "syntax": "<button><mods-containing-h-without-duration>",
+        "example": "3h",
+        "normalized_duration": "[1280:1]",
+        "semantics": "Instant-looking pseudo TAP implemented internally as an extremely short HOLD."
+      }
+    },
+    "touch": {
+      "base_syntax": "<sensor>",
+      "examples": [
+        "B1",
+        "D4",
+        "C",
+        "C1",
+        "C2"
+      ],
+      "normalization": {
+        "C1": "C",
+        "C2": "C"
+      },
+      "modifier": {
+        "f": "firework effect"
+      },
+      "examples_with_modifier": [
+        "B7f"
+      ]
+    },
+    "touch_hold": {
+      "base_syntax": "<sensor><mods>[duration]",
+      "required_modifier": "h",
+      "optional_modifier": {
+        "f": "firework effect"
+      },
+      "modifier_order": "h and f may be written in either order.",
+      "examples": [
+        "Ch[4:3]",
+        "E1h[4:3]",
+        "Chf[1:2]",
+        "Cfh[1:2]"
+      ],
+      "pseudo_touch_hold": {
+        "syntax": "<sensor><mods-containing-h-without-duration>",
+        "example": "Ch",
+        "normalized_duration": "[1280:1]"
+      },
+      "syntax_scope": "Official simai notation permits TOUCH HOLD at any sensor. The Japanese page notes that official non-center TOUCH HOLDs were implemented from PRiSM PLUS."
+    },
+    "each": {
+      "explicit_syntax": "<note>/<note>[/<note>...]",
+      "example": "1/8h[2:1]",
+      "order_semantics": "Order normally does not alter timing, but earlier SLIDE definitions may be rendered visually earlier.",
+      "compact_plain_tap_syntax": "<button><button>[<button>...]",
+      "compact_example": "12",
+      "compact_constraints": "Strict profile permits compact form only for two or more unmodified, non-BREAK button TAPs."
+    },
+    "ex": {
+      "modifier": "x",
+      "documented_targets": [
+        "TAP",
+        "HOLD",
+        "BREAK TAP",
+        "BREAK HOLD"
+      ],
+      "examples": [
+        "1x",
+        "3hx[4:1]",
+        "5bx",
+        "7bxh[2:1]"
+      ],
+      "judgement_semantics": "A hit within GOOD or better is treated as CRITICAL PERFECT."
+    }
+  },
+  "slide": {
+    "concept": {
+      "start_note": "A SLIDE normally creates an approaching star-shaped TAP at its start button.",
+      "default_wait_seconds": "60 / current_bpm",
+      "trace_speed": "constant from trace start to trace end for each complete slide or chain",
+      "track_break_modifier": "b after the final closing bracket",
+      "track_break_scope": "the entire SLIDE track or full chain"
+    },
+    "basic_syntax": "<start><start_mods><path><duration><track_break?>",
+    "start_modifiers": {
+      "b": "BREAK modifier for the approaching start TAP",
+      "x": "EX modifier for the approaching start TAP",
+      "@": "render the automatic star-shaped start TAP as a normal TAP",
+      "?": "remove approaching start TAP; tracing star fades in before movement",
+      "!": "remove approaching start TAP; tracing star appears suddenly at movement start"
+    },
+    "modifier_distinction": {
+      "before_path_b": "affects the starting TAP",
+      "after_final_duration_b": "affects the SLIDE track",
+      "warning": "Combinations of @/?/! or b/x with a removed start TAP are not fully enumerated by the source. Accept only in compatibility mode unless tested."
+    },
+    "shapes": {
+      "-": {
+        "name": "straight",
+        "path_syntax": "-<end>"
+      },
+      ">": {
+        "name": "clockwise_outer_arc",
+        "path_syntax": "><end>"
+      },
+      "<": {
+        "name": "counterclockwise_outer_arc",
+        "path_syntax": "<<end>"
+      },
+      "^": {
+        "name": "short_arc",
+        "path_syntax": "^<end>"
+      },
+      "v": {
+        "name": "center_v",
+        "path_syntax": "v<end>"
+      },
+      "p": {
+        "name": "p_shape",
+        "path_syntax": "p<end>"
+      },
+      "q": {
+        "name": "q_shape",
+        "path_syntax": "q<end>"
+      },
+      "s": {
+        "name": "thunderbolt_s",
+        "path_syntax": "s<end>"
+      },
+      "z": {
+        "name": "thunderbolt_z",
+        "path_syntax": "z<end>"
+      },
+      "pp": {
+        "name": "grand_p",
+        "path_syntax": "pp<end>"
+      },
+      "qq": {
+        "name": "grand_q",
+        "path_syntax": "qq<end>"
+      },
+      "V": {
+        "name": "grand_v",
+        "path_syntax": "V<middle><end>"
+      },
+      "w": {
+        "name": "fan",
+        "path_syntax": "w<declared_end>",
+        "semantics": "Creates three trace stars toward a fan of three endpoints.",
+        "inferred_branch_endpoints": "For a start S and opposite declared end O, branches conventionally terminate at O-1, O, O+1 modulo 8; this branch expansion is an implementation inference, while opposite-end validity is normative from the table."
+      }
+    },
+    "endpoint_validation": {
+      "circular_distance_definition": "min((end-start) mod 8, (start-end) mod 8)",
+      "rules": {
+        "-": "valid iff circular_distance in {2,3,4}",
+        "^": "valid iff circular_distance in {1,2,3}",
+        "v": "valid iff circular_distance in {1,2,3}",
+        ">": "all start/end pairs valid, including equal positions",
+        "<": "all start/end pairs valid, including equal positions",
+        "p": "all start/end pairs valid, including equal positions",
+        "q": "all start/end pairs valid, including equal positions",
+        "pp": "all start/end pairs valid, including equal positions",
+        "qq": "all start/end pairs valid, including equal positions",
+        "s": "valid iff circular_distance == 4",
+        "z": "valid iff circular_distance == 4",
+        "w": "valid iff circular_distance == 4",
+        "V_start_middle": "valid iff circular_distance(start,middle) == 2",
+        "V_middle_end": {
+          "1": {
+            "1": "same",
+            "2": "invalid",
+            "3": {
+              "conditional_start": 7
+            },
+            "4": "any_valid_start",
+            "5": "any_valid_start",
+            "6": "any_valid_start",
+            "7": {
+              "conditional_start": 3
+            },
+            "8": "invalid"
+          },
+          "2": {
+            "1": "invalid",
+            "2": "same",
+            "3": "invalid",
+            "4": {
+              "conditional_start": 8
+            },
+            "5": "any_valid_start",
+            "6": "any_valid_start",
+            "7": "any_valid_start",
+            "8": {
+              "conditional_start": 4
+            }
+          },
+          "3": {
+            "1": {
+              "conditional_start": 5
+            },
+            "2": "invalid",
+            "3": "same",
+            "4": "invalid",
+            "5": {
+              "conditional_start": 1
+            },
+            "6": "any_valid_start",
+            "7": "any_valid_start",
+            "8": "any_valid_start"
+          },
+          "4": {
+            "1": "any_valid_start",
+            "2": {
+              "conditional_start": 6
+            },
+            "3": "invalid",
+            "4": "same",
+            "5": "invalid",
+            "6": {
+              "conditional_start": 2
+            },
+            "7": "any_valid_start",
+            "8": "any_valid_start"
+          },
+          "5": {
+            "1": "any_valid_start",
+            "2": "any_valid_start",
+            "3": {
+              "conditional_start": 7
+            },
+            "4": "invalid",
+            "5": "same",
+            "6": "invalid",
+            "7": {
+              "conditional_start": 3
+            },
+            "8": "any_valid_start"
+          },
+          "6": {
+            "1": "any_valid_start",
+            "2": "any_valid_start",
+            "3": "any_valid_start",
+            "4": {
+              "conditional_start": 8
+            },
+            "5": "invalid",
+            "6": "same",
+            "7": "invalid",
+            "8": {
+              "conditional_start": 4
+            }
+          },
+          "7": {
+            "1": {
+              "conditional_start": 5
+            },
+            "2": "any_valid_start",
+            "3": "any_valid_start",
+            "4": "any_valid_start",
+            "5": {
+              "conditional_start": 1
+            },
+            "6": "invalid",
+            "7": "same",
+            "8": "invalid"
+          },
+          "8": {
+            "1": "invalid",
+            "2": {
+              "conditional_start": 6
+            },
+            "3": "any_valid_start",
+            "4": "any_valid_start",
+            "5": "any_valid_start",
+            "6": {
+              "conditional_start": 2
+            },
+            "7": "invalid",
+            "8": "same"
+          }
+        }
+      },
+      "source": {
+        "url": "https://img.atwiki.jp/simai/attach/1003/54/slides_eng.png",
+        "scope": "Official shape endpoint compatibility table"
+      }
+    },
+    "multiple_same_start": {
+      "syntax": "<start><slide_chain>*<slide_chain-without-repeated-start>[*...]",
+      "example": "1-4[4:3]*-6[8:5]",
+      "semantics": [
+        "All tracks share one approaching start TAP.",
+        "Each track has its own path and duration parameters.",
+        "Additional tracks omit the repeated start button.",
+        "They are treated as an EACH because their tracing starts are described as simultaneous."
+      ],
+      "ambiguity": "The source allows parameters to differ but also states trace starts are simultaneous. Explicitly different wait times are therefore implementation-sensitive and should trigger a compatibility warning."
+    },
+    "chaining": {
+      "common_duration": {
+        "syntax": "<start><segment><segment>...<duration><break?>",
+        "example": "1-4q7-2[1:2]",
+        "semantics": "One constant speed is calculated for the whole chained path."
+      },
+      "per_segment_duration": {
+        "syntax": "<start><segment><duration><segment><duration>...",
+        "example": "1-4[2:1]q7[2:1]-2[1:1]",
+        "all_segments_must_have_duration": true
+      },
+      "break_rule": "Only one b may appear after the final duration; a partial BREAK segment is not allowed."
+    }
+  },
+  "special_notation": {
+    "star_tap": {
+      "$": "non-rotating star-shaped TAP",
+      "$$": "rotating star-shaped TAP with implementation-defined fixed rotation speed"
+    },
+    "slide_start_normal_tap": {
+      "syntax": "<start>@<path><duration>",
+      "example": "1@-5[8:1]"
+    },
+    "pseudo_hold": {
+      "button_example": "3h",
+      "touch_example": "Ch",
+      "normalized_duration": "[1280:1]"
+    },
+    "pseudo_each": {
+      "separator": "`",
+      "delay_per_separator_seconds": 0.001,
+      "example": "1`2`3/4"
+    },
+    "starless_slide": {
+      "?": "No approaching star TAP; tracing star fades in.",
+      "!": "No approaching star TAP; tracing star appears suddenly.",
+      "examples": [
+        "1?-5[2:1]",
+        "1!-5[2:1]"
+      ]
+    }
+  },
+  "maidata_legacy_container": {
+    "status": "appendix; legacy 3simai container, not the normative chart grammar",
+    "assignment_format": "&<name>=<value>",
+    "global_variables": {
+      "title": "&title=",
+      "artist": "&artist=",
+      "single_message": "&smsg=",
+      "designer": "&des=",
+      "first_seconds": "&first=",
+      "active_message_first": "&amsg_first=",
+      "active_message_timing": "&amsg_time=",
+      "active_message_content": "&amsg_content="
+    },
+    "difficulty_index": {
+      "1": "EASY",
+      "2": "BASIC",
+      "3": "ADVANCED",
+      "4": "EXPERT",
+      "5": "MASTER",
+      "6": "Re:MASTER",
+      "7": "ORIGINAL"
+    },
+    "per_difficulty": {
+      "level": "&lv_<1..7>=",
+      "chart": "&inote_<1..7>=",
+      "message_override": "&smsg_<1..7>=",
+      "designer_override": "&des_<1..7>=",
+      "first_override": "&first_<1..7>="
+    },
+    "override_semantics": "Per-difficulty smsg/des/first overrides the global value when present.",
+    "legacy_text_escape": {
+      "&": "\\＆",
+      "+": "\\＋",
+      "%": "\\％",
+      "\\": "\\￥"
+    },
+    "warning": "These escaping and variable rules are documented for 3simai and should not automatically be imposed on Majdata without checking Majdata's implementation."
+  },
+  "normalization": {
+    "recommended": [
+      "Remove or skip insignificant whitespace while retaining source spans for round-trip mode.",
+      "Normalize C1 and C2 sensor aliases to C in the AST while preserving original spelling.",
+      "Normalize modifier order to semantic flags, not a canonical source order, unless serializing in canonical mode.",
+      "Store raw duration text and a parsed duration object.",
+      "Store both declared slide endpoint and expanded fan endpoints.",
+      "Keep source simulator/dialect metadata; do not silently interpret extensions as core syntax."
+    ],
+    "canonical_ast_coordinate": {
+      "button_positions": "integers 1..8",
+      "sensor_positions": "A1..A8, B1..B8, C, D1..D8, E1..E8",
+      "time": "seconds plus rational musical position when a BPM grid exists",
+      "micro_offset": "integer milliseconds from the containing comma slot"
+    }
+  },
+  "parser_pipeline": [
+    "1. Detect maidata envelope and select &inote_n content, or accept a raw chart string.",
+    "2. Strip/skip insignificant whitespace but retain source spans.",
+    "3. Scan timing directives, notes, comma separators and E.",
+    "4. Split each slot's timed groups by backtick, then split exact EACH members by slash.",
+    "5. Resolve compact plain-TAP EACH before parsing a multi-digit token as an error.",
+    "6. Parse each note into semantic flags; do not depend on modifier character order.",
+    "7. Parse slide path greedily (pp/qq before p/q; V consumes middle and end).",
+    "8. Validate slide shape endpoints and chain-duration completeness.",
+    "9. Advance the timeline once per comma.",
+    "10. Emit AST, diagnostics, source spans and dialect warnings."
+  ],
+  "diagnostic_codes": {
+    "S001": "Missing chart terminator E",
+    "S002": "Timing divider used before BPM",
+    "S003": "Unknown or simulator-specific token",
+    "S004": "Invalid button or sensor identifier",
+    "S005": "Duplicate or contradictory modifier",
+    "S006": "Missing required HOLD/SLIDE duration",
+    "S007": "Invalid slide endpoint for shape",
+    "S008": "Invalid Grand-V start/middle/end triple",
+    "S009": "Mixed per-segment and common chain durations",
+    "S010": "Partial BREAK in a chained slide",
+    "S011": "Invalid compact EACH containing a modified/non-TAP note",
+    "S012": "Unsupported modifier combination; retained in compatibility mode",
+    "S013": "Timing state undefined at comma",
+    "S014": "Non-positive BPM/divider/duration",
+    "S015": "Data after E",
+    "S016": "Multiple-slide explicit waits may not be simultaneous",
+    "S017": "Maidata variable is legacy or dialect-specific"
+  },
+  "known_ambiguities": [
+    {
+      "id": "A001",
+      "topic": "No formal grammar is published",
+      "handling": "The included EBNF is a normalized implementation grammar derived from examples and prose, not an author-provided grammar."
+    },
+    {
+      "id": "A002",
+      "topic": "Special-modifier combinations",
+      "handling": "Only explicitly documented order-independence is normative. Other combinations should parse with warnings in compatibility mode."
+    },
+    {
+      "id": "A003",
+      "topic": "Multiple slide tracks with explicitly different wait times",
+      "handling": "The prose says parameters may differ and also that movement begins simultaneously; flag differing explicit waits."
+    },
+    {
+      "id": "A004",
+      "topic": "Simulator extensions",
+      "handling": "Unknown tokens must be preserved as extension nodes in round-trip mode, not silently assigned core semantics."
+    },
+    {
+      "id": "A005",
+      "topic": "English page age",
+      "handling": "The English page is dated 2023. The Japanese page contains a 2026 update regarding official non-center TOUCH HOLD usage, without changing core syntax."
+    }
+  ]
+}

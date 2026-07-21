@@ -1,0 +1,36 @@
+{
+  "archive": "simai_machine_readable_spec",
+  "version": "1.0.0",
+  "files": [
+    {
+      "name": "README.md",
+      "bytes": 6063,
+      "sha256": "0ce60792db518018ccdead19a52bda510511da17a0555ddf685be8c6486c505f"
+    },
+    {
+      "name": "VALIDATION.txt",
+      "bytes": 64,
+      "sha256": "3ac5fa68861e302dde2767a211674e029e5b9a55e664521a88fa3ae515868c6c"
+    },
+    {
+      "name": "simai_ast.schema.json",
+      "bytes": 10606,
+      "sha256": "776d5cc3e10fe105ecbb626e10468de13b2069c7b11bdb50a70f4e411f7b6ede"
+    },
+    {
+      "name": "simai_conformance_cases.json",
+      "bytes": 6117,
+      "sha256": "984e2c6289ff5b49bf450c1343a3505b549ec3d4acf93c4151dbf080c04745db"
+    },
+    {
+      "name": "simai_core.ebnf",
+      "bytes": 3521,
+      "sha256": "ef2f94a1a38ea4a4f9466e97f14b4da62c603deb9ea90bffee64adcb472fbf46"
+    },
+    {
+      "name": "simai_core_spec.zh-CN.json",
+      "bytes": 23815,
+      "sha256": "a6f6abe5588fb9ce23f4cfaae3a0052bf5001d5e0851cf6b4b9435a2538daeba"
+    }
+  ]
+}

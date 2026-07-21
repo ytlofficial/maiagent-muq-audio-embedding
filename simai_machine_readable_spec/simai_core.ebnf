@@ -1,0 +1,86 @@
+(* simai official-core normalized EBNF
+   This grammar is an implementation interpretation. Semantic validation
+   (modifier sets, shape endpoints, chain durations) is required afterward. *)
+
+chart              = { slot }, "E" ;
+slot               = { timing_directive }, [ timed_sequence ], "," ;
+
+timing_directive   = bpm_directive
+                   | divider_directive
+                   | exact_slot_directive ;
+
+bpm_directive      = "(", number, ")" ;
+divider_directive  = "{", number, "}" ;
+exact_slot_directive = "{#", number, "}" ;
+
+timed_sequence     = each_group, { "`", each_group } ;
+each_group         = note, { "/", note }
+                   | compact_plain_tap_each ;
+
+compact_plain_tap_each = button, button, { button } ;
+
+note               = slide
+                   | button_hold
+                   | button_tap
+                   | touch_hold
+                   | touch ;
+
+button_tap         = button, { tap_modifier } ;
+tap_modifier       = "b" | "x" | "$" | "$$" ;
+
+button_hold        = button, hold_modifier_sequence, [ hold_duration ] ;
+hold_modifier_sequence = hold_modifier, { hold_modifier } ;
+hold_modifier      = "h" | "b" | "x" ;
+
+touch              = sensor, [ "f" ] ;
+touch_hold         = sensor, touch_hold_modifier_sequence, [ hold_duration ] ;
+touch_hold_modifier_sequence = touch_hold_modifier, { touch_hold_modifier } ;
+touch_hold_modifier = "h" | "f" ;
+
+slide              = button, { slide_start_modifier }, [ starless_marker ],
+                     slide_chain, { "*", slide_chain_without_start } ;
+
+slide_start_modifier = "b" | "x" | "@" ;
+starless_marker    = "?" | "!" ;
+
+slide_chain        = chain_common_duration
+                   | chain_per_segment_duration ;
+
+slide_chain_without_start = chain_common_duration_without_start
+                          | chain_per_segment_duration_without_start ;
+
+chain_common_duration = segment, { segment }, slide_duration, [ "b" ] ;
+chain_common_duration_without_start = segment, { segment }, slide_duration, [ "b" ] ;
+
+chain_per_segment_duration = segment, slide_duration,
+                             { segment, slide_duration }, [ "b" ] ;
+chain_per_segment_duration_without_start = segment, slide_duration,
+                                           { segment, slide_duration }, [ "b" ] ;
+
+segment            = simple_shape, button
+                   | "V", button, button ;
+
+simple_shape       = "pp" | "qq" | "-" | ">" | "<" | "^" | "v"
+                   | "p" | "q" | "s" | "z" | "w" ;
+
+hold_duration      = "[#", number, "]"
+                   | "[", number, ":", number, "]"
+                   | "[", number, "#", number, ":", number, "]" ;
+
+slide_duration     = "[", number, ":", number, "]"
+                   | "[", number, "#", number, ":", number, "]"
+                   | "[", number, "#", number, "]"
+                   | "[", number, "##", number, "]"
+                   | "[", number, "##", number, ":", number, "]"
+                   | "[", number, "##", number, "#", number, ":", number, "]" ;
+
+button             = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" ;
+sensor             = sensor_ring | "C" | "C1" | "C2" ;
+sensor_ring        = ("A" | "B" | "D" | "E"), button ;
+number             = digit, { digit }, [ ".", digit, { digit } ] ;
+digit              = "0" | "1" | "2" | "3" | "4"
+                   | "5" | "6" | "7" | "8" | "9" ;
+
+(* Whitespace between tokens is ignored.
+   Modifier order/duplication, endpoint validity, and all-or-none segment
+   durations are semantic constraints outside the EBNF. *)

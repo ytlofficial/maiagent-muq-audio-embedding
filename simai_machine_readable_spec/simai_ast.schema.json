@@ -1,0 +1,540 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/simai_ast.schema.json",
+  "title": "Normalized simai AST",
+  "type": "object",
+  "required": [
+    "dialect",
+    "charts"
+  ],
+  "properties": {
+    "dialect": {
+      "type": "string",
+      "enum": [
+        "official_simai_core",
+        "legacy_3simai_maidata",
+        "unknown_extension"
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "charts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/chart"
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/diagnostic"
+      }
+    }
+  },
+  "$defs": {
+    "sourceSpan": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "raw": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ]
+    },
+    "diagnostic": {
+      "type": "object",
+      "required": [
+        "code",
+        "severity",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warning",
+            "error",
+            "fatal"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "span": {
+          "$ref": "#/$defs/sourceSpan"
+        }
+      }
+    },
+    "chart": {
+      "type": "object",
+      "required": [
+        "sequence"
+      ],
+      "properties": {
+        "difficultyIndex": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 7
+        },
+        "difficultyName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "firstSeconds": {
+          "type": "number"
+        },
+        "sequence": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/timingDirective"
+              },
+              {
+                "$ref": "#/$defs/slot"
+              },
+              {
+                "$ref": "#/$defs/end"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "timingDirective": {
+      "type": "object",
+      "required": [
+        "nodeType",
+        "kind",
+        "value"
+      ],
+      "properties": {
+        "nodeType": {
+          "const": "timingDirective"
+        },
+        "kind": {
+          "enum": [
+            "bpm",
+            "divider",
+            "exactSlotSeconds"
+          ]
+        },
+        "value": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "span": {
+          "$ref": "#/$defs/sourceSpan"
+        }
+      }
+    },
+    "slot": {
+      "type": "object",
+      "required": [
+        "nodeType",
+        "microGroups"
+      ],
+      "properties": {
+        "nodeType": {
+          "const": "slot"
+        },
+        "timeSeconds": {
+          "type": "number"
+        },
+        "advanceSeconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "microGroups": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/microGroup"
+          }
+        },
+        "span": {
+          "$ref": "#/$defs/sourceSpan"
+        }
+      }
+    },
+    "microGroup": {
+      "type": "object",
+      "required": [
+        "offsetMilliseconds",
+        "notes"
+      ],
+      "properties": {
+        "offsetMilliseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "notes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/note"
+          }
+        }
+      }
+    },
+    "end": {
+      "type": "object",
+      "required": [
+        "nodeType"
+      ],
+      "properties": {
+        "nodeType": {
+          "const": "end"
+        },
+        "timeSeconds": {
+          "type": "number"
+        },
+        "span": {
+          "$ref": "#/$defs/sourceSpan"
+        }
+      }
+    },
+    "duration": {
+      "type": "object",
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "musical",
+            "exactSeconds",
+            "bpmOverrideMusical",
+            "slideBpmWaitExactTrace",
+            "slideExactWaitExactTrace",
+            "slideExactWaitCurrentBpmTrace",
+            "slideExactWaitOverrideBpmTrace",
+            "pseudo1280"
+          ]
+        },
+        "divider": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "count": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "bpm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "waitSeconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "traceSeconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "raw": {
+          "type": "string"
+        }
+      }
+    },
+    "position": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "button"
+          ],
+          "properties": {
+            "kind": {
+              "const": "button"
+            },
+            "button": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "sensor"
+          ],
+          "properties": {
+            "kind": {
+              "const": "sensor"
+            },
+            "sensor": {
+              "type": "string",
+              "pattern": "^(A[1-8]|B[1-8]|C|D[1-8]|E[1-8])$"
+            },
+            "sourceAlias": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "note": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/tap"
+        },
+        {
+          "$ref": "#/$defs/hold"
+        },
+        {
+          "$ref": "#/$defs/touch"
+        },
+        {
+          "$ref": "#/$defs/touchHold"
+        },
+        {
+          "$ref": "#/$defs/slide"
+        }
+      ]
+    },
+    "tap": {
+      "type": "object",
+      "required": [
+        "noteType",
+        "position"
+      ],
+      "properties": {
+        "noteType": {
+          "const": "tap"
+        },
+        "position": {
+          "$ref": "#/$defs/position"
+        },
+        "break": {
+          "type": "boolean"
+        },
+        "ex": {
+          "type": "boolean"
+        },
+        "star": {
+          "enum": [
+            "none",
+            "static",
+            "rotating"
+          ]
+        },
+        "span": {
+          "$ref": "#/$defs/sourceSpan"
+        }
+      }
+    },
+    "hold": {
+      "type": "object",
+      "required": [
+        "noteType",
+        "position",
+        "duration"
+      ],
+      "properties": {
+        "noteType": {
+          "const": "hold"
+        },
+        "position": {
+          "$ref": "#/$defs/position"
+        },
+        "break": {
+          "type": "boolean"
+        },
+        "ex": {
+          "type": "boolean"
+        },
+        "duration": {
+          "$ref": "#/$defs/duration"
+        },
+        "span": {
+          "$ref": "#/$defs/sourceSpan"
+        }
+      }
+    },
+    "touch": {
+      "type": "object",
+      "required": [
+        "noteType",
+        "position"
+      ],
+      "properties": {
+        "noteType": {
+          "const": "touch"
+        },
+        "position": {
+          "$ref": "#/$defs/position"
+        },
+        "firework": {
+          "type": "boolean"
+        },
+        "span": {
+          "$ref": "#/$defs/sourceSpan"
+        }
+      }
+    },
+    "touchHold": {
+      "type": "object",
+      "required": [
+        "noteType",
+        "position",
+        "duration"
+      ],
+      "properties": {
+        "noteType": {
+          "const": "touchHold"
+        },
+        "position": {
+          "$ref": "#/$defs/position"
+        },
+        "firework": {
+          "type": "boolean"
+        },
+        "duration": {
+          "$ref": "#/$defs/duration"
+        },
+        "span": {
+          "$ref": "#/$defs/sourceSpan"
+        }
+      }
+    },
+    "slideSegment": {
+      "type": "object",
+      "required": [
+        "shape",
+        "end"
+      ],
+      "properties": {
+        "shape": {
+          "enum": [
+            "-",
+            ">",
+            "<",
+            "^",
+            "v",
+            "p",
+            "q",
+            "s",
+            "z",
+            "pp",
+            "qq",
+            "V",
+            "w"
+          ]
+        },
+        "middle": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "duration": {
+          "$ref": "#/$defs/duration"
+        }
+      }
+    },
+    "slideTrack": {
+      "type": "object",
+      "required": [
+        "segments",
+        "durationMode",
+        "breakTrack"
+      ],
+      "properties": {
+        "segments": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/slideSegment"
+          }
+        },
+        "durationMode": {
+          "enum": [
+            "common",
+            "perSegment"
+          ]
+        },
+        "commonDuration": {
+          "$ref": "#/$defs/duration"
+        },
+        "breakTrack": {
+          "type": "boolean"
+        }
+      }
+    },
+    "slide": {
+      "type": "object",
+      "required": [
+        "noteType",
+        "start",
+        "tracks"
+      ],
+      "properties": {
+        "noteType": {
+          "const": "slide"
+        },
+        "start": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "startTap": {
+          "enum": [
+            "star",
+            "normal",
+            "omittedFade",
+            "omittedSudden"
+          ]
+        },
+        "startBreak": {
+          "type": "boolean"
+        },
+        "startEx": {
+          "type": "boolean"
+        },
+        "tracks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/slideTrack"
+          }
+        },
+        "span": {
+          "$ref": "#/$defs/sourceSpan"
+        }
+      }
+    }
+  }
+}

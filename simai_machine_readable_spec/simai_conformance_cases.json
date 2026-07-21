@@ -1,0 +1,290 @@
+{
+  "suite_id": "simai-official-core-conformance",
+  "version": "1.0.0",
+  "notes": "Expected values describe principal parser/validator behavior, not rendered visuals.",
+  "valid": [
+    {
+      "id": "V001",
+      "source": "(174){16}1,2,3,4,E",
+      "expects": [
+        "bpm=174",
+        "divider=16",
+        "4 slots",
+        "terminator"
+      ]
+    },
+    {
+      "id": "V002",
+      "source": "5h[2:1],E",
+      "expects": [
+        "HOLD button5",
+        "musical duration divider2 count1"
+      ]
+    },
+    {
+      "id": "V003",
+      "source": "4h[#5.678],E",
+      "expects": [
+        "HOLD exact duration 5.678s"
+      ]
+    },
+    {
+      "id": "V004",
+      "source": "4h[150#2:1],E",
+      "expects": [
+        "HOLD override BPM150, divider2, count1"
+      ]
+    },
+    {
+      "id": "V005",
+      "source": "5bxh[2:1],E",
+      "expects": [
+        "BREAK EX HOLD; modifier order independent"
+      ]
+    },
+    {
+      "id": "V006",
+      "source": "1-4[8:3],E",
+      "expects": [
+        "straight SLIDE 1→4",
+        "default wait one beat",
+        "trace 3 eighth notes"
+      ]
+    },
+    {
+      "id": "V007",
+      "source": "1-4[160#8:3],E",
+      "expects": [
+        "SLIDE wait one beat at BPM160",
+        "trace 3 eighth notes at BPM160"
+      ]
+    },
+    {
+      "id": "V008",
+      "source": "1-4[160#2],E",
+      "expects": [
+        "SLIDE wait one beat at BPM160",
+        "trace exact 2s"
+      ]
+    },
+    {
+      "id": "V009",
+      "source": "1-4[3##1.5],E",
+      "expects": [
+        "SLIDE wait 3s",
+        "trace 1.5s"
+      ]
+    },
+    {
+      "id": "V010",
+      "source": "1-4[3##8:3],E",
+      "expects": [
+        "SLIDE wait 3s",
+        "trace 3 eighth notes at current BPM"
+      ]
+    },
+    {
+      "id": "V011",
+      "source": "1-4[3##160#8:3],E",
+      "expects": [
+        "SLIDE wait 3s",
+        "trace 3 eighth notes at BPM160"
+      ]
+    },
+    {
+      "id": "V012",
+      "source": "1V35[8:3],E",
+      "expects": [
+        "Grand-V start1 middle3 end5 valid"
+      ]
+    },
+    {
+      "id": "V013",
+      "source": "1-4[4:3]*-6[8:5],E",
+      "expects": [
+        "two same-start tracks"
+      ]
+    },
+    {
+      "id": "V014",
+      "source": "1-4q7-2[1:2],E",
+      "expects": [
+        "three chained segments",
+        "one common duration"
+      ]
+    },
+    {
+      "id": "V015",
+      "source": "1-4[2:1]q7[2:1]-2[1:1],E",
+      "expects": [
+        "three chained segments",
+        "per-segment durations complete"
+      ]
+    },
+    {
+      "id": "V016",
+      "source": "B1/D4/Ch[4:3],E",
+      "expects": [
+        "EACH with two TOUCH and one TOUCH HOLD"
+      ]
+    },
+    {
+      "id": "V017",
+      "source": "C1/C2/C,E",
+      "expects": [
+        "all positions normalize to sensor C"
+      ]
+    },
+    {
+      "id": "V018",
+      "source": "1/8h[2:1],E",
+      "expects": [
+        "exact EACH"
+      ]
+    },
+    {
+      "id": "V019",
+      "source": "12,E",
+      "expects": [
+        "compact EACH of plain TAP1 and TAP2"
+      ]
+    },
+    {
+      "id": "V020",
+      "source": "1`2`3/4,E",
+      "expects": [
+        "TAP1 at +0ms",
+        "TAP2 at +1ms",
+        "EACH 3+4 at +2ms"
+      ]
+    },
+    {
+      "id": "V021",
+      "source": "1$,1$$,E",
+      "expects": [
+        "static star TAP",
+        "rotating star TAP"
+      ]
+    },
+    {
+      "id": "V022",
+      "source": "1@-5[8:1],E",
+      "expects": [
+        "SLIDE start rendered as normal TAP"
+      ]
+    },
+    {
+      "id": "V023",
+      "source": "3h,Ch,E",
+      "expects": [
+        "pseudo button HOLD",
+        "pseudo TOUCH HOLD",
+        "normalized 1280th-note duration"
+      ]
+    },
+    {
+      "id": "V024",
+      "source": "1?-5[2:1],1!-5[2:1],E",
+      "expects": [
+        "omitted start with fade",
+        "omitted start sudden"
+      ]
+    },
+    {
+      "id": "V025",
+      "source": "B7f/Chf[1:2],E",
+      "expects": [
+        "TOUCH firework",
+        "TOUCH HOLD firework"
+      ]
+    }
+  ],
+  "invalid_strict": [
+    {
+      "id": "I001",
+      "source": "{8}(120)1,E",
+      "diagnostic": "S002",
+      "reason": "divider precedes BPM initialization"
+    },
+    {
+      "id": "I002",
+      "source": "1-2[8:1],E",
+      "diagnostic": "S007",
+      "reason": "straight slide to adjacent endpoint"
+    },
+    {
+      "id": "I003",
+      "source": "1^5[8:1],E",
+      "diagnostic": "S007",
+      "reason": "short arc to opposite endpoint"
+    },
+    {
+      "id": "I004",
+      "source": "1s4[8:1],E",
+      "diagnostic": "S007",
+      "reason": "s-shape endpoint is not opposite"
+    },
+    {
+      "id": "I005",
+      "source": "1w4[8:1],E",
+      "diagnostic": "S007",
+      "reason": "fan declared endpoint is not opposite"
+    },
+    {
+      "id": "I006",
+      "source": "1V25[8:1],E",
+      "diagnostic": "S008",
+      "reason": "Grand-V middle is not ±2 from start"
+    },
+    {
+      "id": "I007",
+      "source": "1-4[2:1]q7-2[1:1],E",
+      "diagnostic": "S009",
+      "reason": "per-segment durations are incomplete"
+    },
+    {
+      "id": "I008",
+      "source": "1-4[2:1]bq7[2:1]-2[1:1],E",
+      "diagnostic": "S010",
+      "reason": "partial BREAK inside chain"
+    },
+    {
+      "id": "I009",
+      "source": "1b2,E",
+      "diagnostic": "S011",
+      "reason": "compact EACH cannot contain a modified TAP"
+    },
+    {
+      "id": "I010",
+      "source": "(120){4}1,2,",
+      "diagnostic": "S001",
+      "reason": "missing E"
+    },
+    {
+      "id": "I011",
+      "source": "C3,E",
+      "diagnostic": "S004",
+      "reason": "invalid C sensor alias"
+    }
+  ],
+  "compatibility_warnings": [
+    {
+      "id": "W001",
+      "source": "1b?-5[2:1],E",
+      "diagnostic": "S012",
+      "reason": "BREAK modifier targets a start TAP that is omitted"
+    },
+    {
+      "id": "W002",
+      "source": "1-4[3##1]*-6[4##1],E",
+      "diagnostic": "S016",
+      "reason": "same-start tracks declare different explicit waits"
+    },
+    {
+      "id": "W003",
+      "source": "1k,E",
+      "diagnostic": "S003",
+      "reason": "unknown extension token must be preserved in round-trip mode"
+    }
+  ]
+}
